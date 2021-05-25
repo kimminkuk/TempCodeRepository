@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "..\\..\\AppData\\Roaming\\Code\\User\\globalStorage\\humy2833.ftp-simple\\remote-workspace-temp\\3714c2bdef3a2b3f5b32beb5576f4205\\home\\nis\\mkkim\\Source\\TEST\\210107"
+		},
+		{
+			"path": "..\\..\\Desktop\\Web"
+		},
+		{
+			"path": "..\\WebDbMain-main"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"iostream": "cpp",
+			"random": "cpp",
+			"limits": "cpp"
+		}
+	}
+}

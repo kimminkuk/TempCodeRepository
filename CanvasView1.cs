@@ -91,7 +91,7 @@ namespace ParbolicMotionGame.ViewModels
         float[] defencewall_5_x_1 = new float[2] { 0.75f, 0.76f };
         float[] defencewall_5_x_2 = new float[2] { 0.75f, 0.76f };
         float[] defencewall_5_y_1 = new float[2] { 0.15f, 0.4f };
-        float[] defencewall_5_y_2 = new float[2] { 0.6f, 0.9f };
+        float[] defencewall_5_y_2 = new float[2] { 0.6f, 0.85f };
 
         float ballsize = 0.01f;
         bool wallupdown = true;
@@ -1549,9 +1549,9 @@ namespace ParbolicMotionGame.ViewModels
                     // DefenceWallLevel_2[3] = new SKPoint((float)0.56 * info.Width, (float)0.7 * info.Height);
 
                     DefenceWallLevel_2[0] = new SKPoint(defencewall_2_x[0] * info.Width, defencewall_2_y[0] * info.Height);
-                    DefenceWallLevel_2[1] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[0] * info.Height);
+                    //DefenceWallLevel_2[1] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[0] * info.Height);
                     DefenceWallLevel_2[2] = new SKPoint(defencewall_2_x[0] * info.Width, defencewall_2_y[1] * info.Height);
-                    DefenceWallLevel_2[3] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[1] * info.Height);
+                    //DefenceWallLevel_2[3] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[1] * info.Height);
                     SKPaint paintDefenceWallLevel_2 = new SKPaint
                     {
                         Style = SKPaintStyle.Fill,
@@ -2320,9 +2320,9 @@ namespace ParbolicMotionGame.ViewModels
                         cnt_defencewallrendering_2++;
                         if (wallupdown) // up
                         {
-                            defencewall_2_y[0] = defencewall_2_y[0] - 0.0015f * (cnt_defencewallrendering_2);
-                            defencewall_2_y[1] = defencewall_2_y[1] - 0.0015f * (cnt_defencewallrendering_2);
-                            if (cnt_defencewallrendering_2 == 99)
+                            defencewall_2_y[0] = 0.15f - 0.0015f * (cnt_defencewallrendering_2);
+                            defencewall_2_y[1] = 0.7f - 0.0015f * (cnt_defencewallrendering_2);
+                            if (cnt_defencewallrendering_2 >= 99)
                             {
                                 wallupdown = false;
                                 cnt_defencewallrendering_2 = 0;
@@ -2330,9 +2330,9 @@ namespace ParbolicMotionGame.ViewModels
                         }
                         else //down
                         {
-                            defencewall_2_y[0] = defencewall_2_y[0] + 0.0015f * (cnt_defencewallrendering_2);
-                            defencewall_2_y[1] = defencewall_2_y[1] + 0.0015f * (cnt_defencewallrendering_2);
-                            if (cnt_defencewallrendering_2 == 99)
+                            defencewall_2_y[0] = 0.0015f * (cnt_defencewallrendering_2);
+                            defencewall_2_y[1] = 0.55f + 0.0015f * (cnt_defencewallrendering_2);
+                            if (cnt_defencewallrendering_2 >= 99)
                             {
                                 wallupdown = true;
                                 cnt_defencewallrendering_2 = 0;
@@ -2343,11 +2343,11 @@ namespace ParbolicMotionGame.ViewModels
                         cnt_defencewallrendering_3++;
                         if (wallupdown) // up
                         {
-                            defencewall_3_x[0] = defencewall_3_x[0] - 0.0015f * (cnt_defencewallrendering_3);
-                            defencewall_3_x[1] = defencewall_3_x[1] - 0.0015f * (cnt_defencewallrendering_3);
-                            defencewall_3_y[0] = defencewall_3_y[0] - 0.0015f * (cnt_defencewallrendering_3);
-                            defencewall_3_y[1] = defencewall_3_y[1] - 0.0015f * (cnt_defencewallrendering_3);
-                            if (cnt_defencewallrendering_3 == 99)
+                            defencewall_3_x[0] = 0.5f - 0.0015f * (cnt_defencewallrendering_3);
+                            defencewall_3_x[1] = 0.7f - 0.0015f * (cnt_defencewallrendering_3);
+                            defencewall_3_y[0] = 0.15f - 0.0015f * (cnt_defencewallrendering_3);
+                            defencewall_3_y[1] = 0.75f - 0.0015f * (cnt_defencewallrendering_3);
+                            if (cnt_defencewallrendering_3 >= 99)
                             {
                                 wallupdown = false;
                                 cnt_defencewallrendering_3 = 0;
@@ -2355,11 +2355,11 @@ namespace ParbolicMotionGame.ViewModels
                         }
                         else //down
                         {
-                            defencewall_3_x[0] = defencewall_3_x[0] + 0.0015f * (cnt_defencewallrendering_3);
-                            defencewall_3_x[1] = defencewall_3_x[1] + 0.0015f * (cnt_defencewallrendering_3);
-                            defencewall_3_y[0] = defencewall_3_y[0] + 0.0015f * (cnt_defencewallrendering_3);
-                            defencewall_3_y[1] = defencewall_3_y[1] + 0.0015f * (cnt_defencewallrendering_3);
-                            if (cnt_defencewallrendering_3 == 99)
+                            defencewall_3_x[0] = 0.35f + 0.0015f * (cnt_defencewallrendering_3);
+                            defencewall_3_x[1] = 0.55f + 0.0015f * (cnt_defencewallrendering_3);
+                            defencewall_3_y[0] = 0.0015f * (cnt_defencewallrendering_3);
+                            defencewall_3_y[1] = 0.6f + 0.0015f * (cnt_defencewallrendering_3);
+                            if (cnt_defencewallrendering_3 >= 99)
                             {
                                 wallupdown = true;
                                 cnt_defencewallrendering_3 = 0;
@@ -2372,14 +2372,14 @@ namespace ParbolicMotionGame.ViewModels
                         if (wallupdown) // up
                         {
                             //main wall
-                            defencewall_4_y_1[0] = defencewall_4_y_1[0] - 0.001f * (cnt_defencewallrendering_4);
-                            defencewall_4_y_1[1] = defencewall_4_y_1[1] - 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_1[0] = 0.1f - 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_1[1] = 0.55f - 0.001f * (cnt_defencewallrendering_4);
 
                             //sub wall
-                            defencewall_4_y_2[0] = defencewall_4_y_2[0] - 0.001f * (cnt_defencewallrendering_4);
-                            defencewall_4_y_2[1] = defencewall_4_y_2[1] - 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_2[0] = 0.15f + 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_2[1] = 0.6f + 0.001f * (cnt_defencewallrendering_4);
 
-                            if (cnt_defencewallrendering_4 == 99)
+                            if (cnt_defencewallrendering_4 >= 99)
                             {
                                 wallupdown = false;
                                 cnt_defencewallrendering_4 = 0;
@@ -2388,14 +2388,14 @@ namespace ParbolicMotionGame.ViewModels
                         else //down
                         {
                             //main
-                            defencewall_4_y_1[0] = defencewall_4_y_1[0] + 0.001f * (cnt_defencewallrendering_4);
-                            defencewall_4_y_1[1] = defencewall_4_y_1[1] + 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_1[0] = 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_1[1] = 0.45f + 0.001f * (cnt_defencewallrendering_4);
 
                             //sub wall
-                            defencewall_4_y_2[0] = defencewall_4_y_2[0] - 0.001f * (cnt_defencewallrendering_4);
-                            defencewall_4_y_2[1] = defencewall_4_y_2[1] - 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_2[0] = 0.25f - 0.001f * (cnt_defencewallrendering_4);
+                            defencewall_4_y_2[1] = 0.7f - 0.001f * (cnt_defencewallrendering_4);
 
-                            if (cnt_defencewallrendering_4 == 99)
+                            if (cnt_defencewallrendering_4 >= 99)
                             {
                                 wallupdown = true;
                                 cnt_defencewallrendering_4 = 0;
