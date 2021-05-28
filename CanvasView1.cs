@@ -19,6 +19,9 @@ namespace ParbolicMotionGame.ViewModels
 {
     public class CanvasView1 : INotifyPropertyChanged
     {
+       /*
+        *  Init Setting
+        */
         public float[] rect_point = new float[4 * 4];
         public bool[] rect_pn = new bool[4 * 4];
         SKRect[] rect = new SKRect[4 * 4];
@@ -69,6 +72,8 @@ namespace ParbolicMotionGame.ViewModels
         bool enable_rendering = false;
         float Vo_test = 0f;
         int Vo_test_Power = 1000;
+        float x_width_save = 0f;
+        float y_width_save = 0f;
 
         /*
          *  Update : Wall Motion Rendering
@@ -91,7 +96,7 @@ namespace ParbolicMotionGame.ViewModels
         float[] defencewall_5_x_1 = new float[2] { 0.75f, 0.76f };
         float[] defencewall_5_x_2 = new float[2] { 0.75f, 0.76f };
         float[] defencewall_5_y_1 = new float[2] { 0.15f, 0.4f };
-        float[] defencewall_5_y_2 = new float[2] { 0.6f, 0.85f };
+        float[] defencewall_5_y_2 = new float[2] { 0.6f, 0.8f };
 
         float ballsize = 0.01f;
         bool wallupdown = true;
@@ -109,6 +114,7 @@ namespace ParbolicMotionGame.ViewModels
          *  Game State
          */
         int GameState = 0;
+        public enum GameStartCondition { GameTitle, GameInit, GamePlay ,GameEnd, GameClear }
 
         /*
          *  Binding Text
@@ -121,10 +127,10 @@ namespace ParbolicMotionGame.ViewModels
         bool game_Btn_Enable = false;
         bool game_touch_enable = false;
         bool game_start_touch_enable = false;
-        bool gameDebugLevelUp_Visble = false; //Debug -> true, default : false
-        bool gameDebugLevelDown_Visble = false;
-        bool gameDebugLevelUp_Enable = false;
-        bool gameDebugLevelDown_Enable = false;
+        bool gameDebugLevelUp_Visble = true; //Debug -> true, default : false
+        bool gameDebugLevelDown_Visble = true;
+        bool gameDebugLevelUp_Enable = true;
+        bool gameDebugLevelDown_Enable = true;
         bool gameStartTitle_Visible = false;
         bool gameStartTitle_Enable = false;
         bool GameInitOnOff = true;
@@ -144,17 +150,13 @@ namespace ParbolicMotionGame.ViewModels
 
         public bool GameStartTitle_Visible { get => gameStartTitle_Visible; set { gameStartTitle_Visible = value; NotifyPropertyChanged("GameStartTitle_Visible"); } }
         public bool GameStartTitle_Enable { get => gameStartTitle_Enable; set { gameStartTitle_Enable = value; NotifyPropertyChanged("GameStartTitle_Enable"); } }
-
-        /*
-         *  Enum 
-         */
-        public enum GameStartCondition { GameTitle, GameInit, GamePlay ,GameEnd, GameClear }
         
         /*
          *  Timer
          */
         System.Threading.Timer timer_;
         System.Threading.Timer timer_wall;
+        System.Threading.Timer timer_BallWallTouch;
 
         public CanvasView1()
         {
@@ -657,6 +659,8 @@ namespace ParbolicMotionGame.ViewModels
                          */
                         if (GameInitOnOff)
                         {
+                            x_width_save = info.Width;
+                            y_width_save = info.Height;
                             StartTimer(sender);
                             if (GameInitDeviceTimerOnOff)
                             {
@@ -738,33 +742,32 @@ namespace ParbolicMotionGame.ViewModels
                         /*
                          * x,y Position Pre-Calculate
                          */
-                        if (cnt_gameplayrender == 0)
+                        if ((cnt_gameplayrender % 5) == 0)
                         {
                             PredictPostionCalculate(canvas, info, Vo_test, control_rcos_abs, control_rsin_abs);
                         }
                         cnt_gameplayrender++;
                         GameLevelTextCanvas(Game_level, sender, surface, info);
 
-                        if (cnt_rendering >= cnt_gameplayrender)
-                        {
+                        //if (cnt_rendering > cnt_gameplayrender)
+                        //{
                             canvas.DrawCircle(x_rendering[cnt_gameplayrender], y_rendering[cnt_gameplayrender], (float)0.01 * info.Width, paint);
                             if (x_rendering[cnt_gameplayrender] > (float)(info.Width * 0.75))
                             {
                                 GoalBlockDamageCount(Game_level, x_rendering[cnt_gameplayrender], y_rendering[cnt_gameplayrender], info);
                             }
-                        }
+                        //}
                         //Ball Rendering End and Finish Condition Check
-                        else
+                        //else
+                        if(enable_rendering)
                         {
                             //Game End Setting, Variable initialization
                             GameEndandInitSetting(sender, Game_level, surface, info);
                         }
-
                         /*
                          *  Goal Block Destroy Effect
                          */
                         GoalBlockDestroyEffect(Game_level, canvas, info, surface);
-
                     }
                     break;
 
@@ -789,14 +792,144 @@ namespace ParbolicMotionGame.ViewModels
             }
         }
 
+        private void PredictPostionCalculate_thread(float Vo_test, float control_rcos_abs, float control_rsin_abs)
+        {
+            pos_y_ceiling_touchIncrease = 0;
+    
+            pos_y_ceiling_touch = false;
+            //int pre_cnt_gameplayrender = cnt_gameplayrender; //0,5,10...
+            //for (int i = 0; i < info.Width * 2; i++)
+            {
+                //if (i == -1) continue;
+
+                float t = (float)cnt_gameplayrender / 80;
+                float g = 5 * t;
+
+                float x = (float)(Vo_test * control_rcos_abs) * t + Init_x;
+                float y = ((float)(Vo_test * control_rsin_abs) * t - g * t * 4); //info.Height ( ex) 640 )
+                                                                                 //float y_Upside = 0;
+
+                y = Init_y - y;
+
+                //처음 천장 맞은 경우
+                //한번 실행하면서 순간 Y좌표를 저장한다.
+                if (!pos_y_ceiling_touch && y < 0)
+                {
+                    pos_y_ceiling_touch = true;
+                }
+
+                //천장 맞으면 자유 낙하 운동 개념으로 떨어지게..
+                if (pos_y_ceiling_touch)
+                {
+                    pos_y_ceiling_touchIncrease++;
+                    float t_y = (float)pos_y_ceiling_touchIncrease / 25;
+                    //float g_y = 6 * t_y;
+                    //y = t_y * g_y * 5;
+
+                    float g_y = 7 * t_y;
+                    y = t_y * g_y * 5;
+                }
+                /*
+                 * Ball Touch DefenceWall True or False
+                 */
+                DefenceWallTouchJudge_thread(Game_level, x, y);
+
+                switch (Game_level)
+                {
+                    case 1:
+                        if (wall_pn[0])
+                        {
+                            x = (defencewall_1_x[0]-ballsize) * x_width_save + ((defencewall_1_x[0] - ballsize) * x_width_save - x);
+                        }
+                        break;
+                    case 2:
+                        if (wall_pn[1])
+                        {
+                            x = (defencewall_2_x[0] - ballsize) * x_width_save + ((defencewall_2_x[0] - ballsize) * x_width_save - x);
+                        }
+                        break;
+                    case 3:
+                        if (wall_pn[2])
+                        {
+                            x = (float)xpos_mirror * x_width_save + ((float)xpos_mirror * x_width_save - x);
+                        }
+                        break;
+                    case 4:
+                        if (wall_pn[3])
+                        {
+                            x = (defencewall_4_x_1[0] - ballsize) * x_width_save + ((defencewall_4_x_1[0] - ballsize) * x_width_save - x);
+                        }
+                        if (wall_pn_sub[3] != true && x >= (defencewall_4_x_2[0]-ballsize) * x_width_save &&
+                            x <= (defencewall_4_x_2[0] + ballsize) * x_width_save && y >= defencewall_4_y_2[0] * y_width_save
+                            && y <= defencewall_4_y_2[1] * y_width_save)
+                        {
+                            wall_pn_sub[3] = true;
+                            wall_pn[3] = false;
+                        }
+                        if (wall_pn_sub[3])
+                        {
+                            x = (defencewall_4_x_2[0] - ballsize) * x_width_save + ((defencewall_4_x_2[0] - ballsize) * x_width_save - x);
+
+                            if (wall_pn_Level4_main[1] != 1 && x >= (defencewall_4_x_1[0]+ballsize) * x_width_save && x <= (defencewall_4_x_1[0] + ballsize*2) * x_width_save
+                                && y >= defencewall_4_y_1[0] * y_width_save && y <= defencewall_4_y_1[1] * y_width_save)
+                            {
+                                wall_pn_Level4_main[1] = 1;
+                            }
+                        }
+                        //공이 A B 벽이 있을 경우,
+                        //B벽을 맞고 A벽을 맞을때 공의 위치 계산
+                        // A<-->B , A와B 벽사이의 거리 *2 만큼 x위치에서 빼준다.
+                        if (wall_pn_Level4_main[1] == 1)
+                        {
+                            x = (float)(Vo_test * control_rcos_abs) * t + Init_x - 0.3f * x_width_save;
+                            wall_pn_sub[3] = false;
+
+                            if (x >= (defencewall_4_x_2[0] - ballsize) * x_width_save && x <= (defencewall_4_x_2[0]) * x_width_save
+                                && y >= defencewall_4_y_2[0] * y_width_save && y <= defencewall_4_y_2[1] * y_width_save)
+                            {
+                                wall_pn_sub[3] = true;
+                                wall_pn[3] = false;
+                                wall_pn_Level4_main[1] = 0;
+                            }
+
+                        }
+                        break;
+                    case 5:
+                        if (wall_pn[4])
+                        {
+                            x = (defencewall_5_x_1[0]-ballsize) * x_width_save  + ((defencewall_5_x_1[0] - ballsize) * x_width_save - x);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                //Add : for pre-rendering
+                //cnt_rendering = i;
+                x_rendering[cnt_gameplayrender] = x;
+                y_rendering[cnt_gameplayrender] = y;
+
+                // GAME END
+                // End rendering point save
+                if (y > y_width_save || x < 0 || x > x_width_save)
+                {
+                    enable_rendering = true;
+                    //cnt_rendering = i;
+                    break;
+                }
+            }
+
+        }
+
         private void PredictPostionCalculate(SKCanvas canvas, SKImageInfo info, float Vo_test, float control_rcos_abs, float control_rsin_abs)
         {
             pos_y_ceiling_touchIncrease = 0;
-
+    
             pos_y_ceiling_touch = false;
-            for (int i = 0; i < info.Width * 2; i++)
+            int pre_cnt_gameplayrender = cnt_gameplayrender; //0,5,10...
+            //for (int i = 0; i < info.Width * 2; i++)
+            for (int i = cnt_gameplayrender; i < cnt_gameplayrender+5; i++)
             {
-                if (i == -1) continue;
+                //if (i == -1) continue;
 
                 float t = (float)i / 80;
                 float g = 5 * t;
@@ -835,13 +968,13 @@ namespace ParbolicMotionGame.ViewModels
                     case 1:
                         if (wall_pn[0])
                         {
-                            x = (float)0.59 * info.Width + ((float)0.59 * info.Width - x);
+                            x = (defencewall_1_x[0]-ballsize) * info.Width + ((defencewall_1_x[0] - ballsize) * info.Width - x);
                         }
                         break;
                     case 2:
                         if (wall_pn[1])
                         {
-                            x = (float)0.54 * info.Width + ((float)0.54 * info.Width - x);
+                            x = (defencewall_2_x[0] - ballsize) * info.Width + ((defencewall_2_x[0] - ballsize) * info.Width - x);
                         }
                         break;
                     case 3:
@@ -853,21 +986,21 @@ namespace ParbolicMotionGame.ViewModels
                     case 4:
                         if (wall_pn[3])
                         {
-                            x = (float)0.59 * info.Width + ((float)0.59 * info.Width - x);
+                            x = (defencewall_4_x_1[0] - ballsize) * info.Width + ((defencewall_4_x_1[0] - ballsize) * info.Width - x);
                         }
-                        if (wall_pn_sub[3] != true && x >= (float)0.74 * info.Width &&
-                            x <= (float)0.745 * info.Width && y >= (float)0.15 * info.Height
-                            && y <= (float)0.6 * info.Height)
+                        if (wall_pn_sub[3] != true && x >= (defencewall_4_x_2[0]-ballsize) * info.Width &&
+                            x <= (defencewall_4_x_2[0] + ballsize) * info.Width && y >= defencewall_4_y_2[0] * info.Height
+                            && y <= defencewall_4_y_2[1] * info.Height)
                         {
                             wall_pn_sub[3] = true;
                             wall_pn[3] = false;
                         }
                         if (wall_pn_sub[3])
                         {
-                            x = (float)0.74 * info.Width + ((float)0.74 * info.Width - x);
+                            x = (defencewall_4_x_2[0] - ballsize) * info.Width + ((defencewall_4_x_2[0] - ballsize) * info.Width - x);
 
-                            if (wall_pn_Level4_main[1] != 1 && x >= (float)0.61 * info.Width && x <= (float)0.615 * info.Width
-                                && y >= (float)0.1 * info.Height && y <= (float)0.55 * info.Height)
+                            if (wall_pn_Level4_main[1] != 1 && x >= (defencewall_4_x_1[0]+ballsize) * info.Width && x <= (defencewall_4_x_1[0] + ballsize*2) * info.Width
+                                && y >= defencewall_4_y_1[0] * info.Height && y <= defencewall_4_y_1[1] * info.Height)
                             {
                                 wall_pn_Level4_main[1] = 1;
                             }
@@ -880,8 +1013,8 @@ namespace ParbolicMotionGame.ViewModels
                             x = (float)(Vo_test * control_rcos_abs) * t + Init_x - 0.3f * info.Width;
                             wall_pn_sub[3] = false;
 
-                            if (x >= (float)0.74 * info.Width && x <= (float)0.745 * info.Width
-                                && y >= (float)0.15 * info.Height && y <= (float)0.6 * info.Height)
+                            if (x >= (defencewall_4_x_2[0] - ballsize) * info.Width && x <= (defencewall_4_x_2[0]) * info.Width
+                                && y >= defencewall_4_y_2[0] * info.Height && y <= defencewall_4_y_2[1] * info.Height)
                             {
                                 wall_pn_sub[3] = true;
                                 wall_pn[3] = false;
@@ -893,7 +1026,7 @@ namespace ParbolicMotionGame.ViewModels
                     case 5:
                         if (wall_pn[4])
                         {
-                            x = (float)0.74 * info.Width + ((float)0.74 * info.Width - x);
+                            x = (defencewall_5_x_1[0]-ballsize) * info.Width + ((defencewall_5_x_1[0] - ballsize) * info.Width - x);
                         }
                         break;
                     default:
@@ -1009,78 +1142,166 @@ namespace ParbolicMotionGame.ViewModels
             switch (LEVEL)
             {
                 case 1:
-                    if (wall_pn[0] != true && x >= (float)0.59 * info.Width &&
-                        x <= (float)0.60 * info.Width && y >= (float)0.2 * info.Height
-                        && y <= (float)0.8 * info.Height)
+                    if (wall_pn[0] != true && x >= (defencewall_1_x[0]-ballsize) * info.Width &&
+                        x <= (defencewall_1_x[1] - ballsize) * info.Width && y >= defencewall_1_y[0] * info.Height
+                        && y <= defencewall_1_y[1] * info.Height)
                     {
                         wall_pn[0] = true;
                     }
                     break;
                 case 2:
-                    if (wall_pn[1] != true && x >= (float)0.55 * info.Width &&
-                        x <= (float)0.57 * info.Width && y >= (float)0.15 * info.Height
-                        && y <= (float)0.7 * info.Height)
+                    if (wall_pn[1] != true && x >= (defencewall_2_x[0] - ballsize) * info.Width &&
+                        x <= (defencewall_2_x[0] + ballsize*2) * info.Width && y >= defencewall_2_y[0] * info.Height
+                        && y <= defencewall_2_y[1] * info.Height)
                     {
                         wall_pn[1] = true;
                     }
                     break;
                 case 3:
-                    if (wall_pn[2] != true && x >= (float)0.5 * info.Width &&
-                        x <= (float)0.52 * info.Width && y >= (float)0.15 * info.Height
-                        && y <= (float)0.20 * info.Height)
+                    if (wall_pn[2] != true && x >= (defencewall_3_x[0]-ballsize) * info.Width &&
+                        x <= (defencewall_3_x[0] + ballsize*2) * info.Width && y >= defencewall_3_y[0] * info.Height
+                        && y <= (defencewall_3_y[0] / 10 + defencewall_3_y[0]) * info.Height)
                     {
                         wall_pn[2] = true;
-                        xpos_mirror = (float)(0.51-0.01);
+                        xpos_mirror = (defencewall_3_x[0] - ballsize);
                     }
-                    else if (wall_pn[2] != true && x >= (float)0.52 * info.Width &&
-                        x <= (float)0.54 * info.Width && y >= (float)0.20 * info.Height
-                        && y <= (float)0.25 * info.Height)
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize) * info.Width &&
+                        x <= (defencewall_3_x[0] + ballsize * 3) * info.Width && y >= defencewall_3_y[0] * info.Height
+                        && y <= (defencewall_3_y[0] / 10 + defencewall_3_y[0]) * info.Height)
                     {
                         wall_pn[2] = true;
-                        xpos_mirror = (float)0.53;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize);
                     }
-                    else if (wall_pn[2] != true && x >= (float)0.54 * info.Width &&
-                        x <= (float)0.56 * info.Width && y >= (float)0.25 * info.Height
-                        && y <= (float)0.4 * info.Height)
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize * 4) * info.Width &&
+                        x <= (defencewall_3_x[0] + ballsize * 6) * info.Width && y >= (defencewall_3_y[0] / 10 + defencewall_3_y[0]) * info.Height
+                        && y <= ((defencewall_3_y[0]*2) / 10 + defencewall_3_y[0]) * info.Height)
 
                     {
                         wall_pn[2] = true;
-                        xpos_mirror = (float)0.55;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize * 4);
                     }
-                    else if (wall_pn[2] != true && x >= (float)0.58 * info.Width &&
-                        x <= (float)0.60 * info.Width && y >= (float)0.4 * info.Height
-                        && y <= (float)0.55 * info.Height)
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize * 7) * info.Width &&
+                        x <= (defencewall_3_x[0] + ballsize * 10) * info.Width && y >= ((defencewall_3_y[0]*2) / 10 + defencewall_3_y[0]) * info.Height
+                        && y <= ((defencewall_3_y[0] * 3) / 10 + defencewall_3_y[0]) * info.Height)
                     {
                         wall_pn[2] = true;
-                        xpos_mirror = (float)0.57;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize * 7);
                     }
-                    else if (wall_pn[2] != true && x >= (float)0.60 * info.Width &&
-                        x <= (float)0.62 * info.Width && y >= (float)0.55 * info.Height
-                        && y <= (float)0.7 * info.Height)
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize * 10) * info.Width &&
+                        x <= (defencewall_3_x[0] + ballsize * 12) * info.Width && y >= ((defencewall_3_y[0] * 3) / 10 + defencewall_3_y[0]) * info.Height
+                        && y <= ((defencewall_3_y[0] * 4) / 10 + defencewall_3_y[0]) * info.Height)
                     {
                         wall_pn[2] = true;
-                        xpos_mirror = (float)0.59;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize * 10);
                     }
                     break;
 
                 case 4:
-                    if (wall_pn[3] != true && x >= (float)0.6 * info.Width &&
-                        x <= (float)0.605 * info.Width && y >= (float)0.1 * info.Height
-                        && y <= (float)0.55 * info.Height)
+                    if (wall_pn[3] != true && x >= (defencewall_4_x_1[0]-ballsize) * info.Width &&
+                        x <= (defencewall_4_x_1[0] + ballsize) * info.Width && y >= defencewall_4_y_1[0] * info.Height
+                        && y <= defencewall_4_y_1[1] * info.Height)
                     {
                         wall_pn[3] = true;
                     }
                     break;
                 case 5:
-                    if (wall_pn[4] != true && x >= (float)0.75 * info.Width 
-                        && x <= (float)0.76 * info.Width) 
+                    if (wall_pn[4] != true && x >= (defencewall_5_x_1[0]-ballsize) * info.Width 
+                        && x <= (defencewall_5_x_1[0] + ballsize) * info.Width) 
                     {
                         //y좌표가 0~0.2info.height, 0.4~0.6만 통과한다.
-                        if ( y >= (float)0.6 * info.Height && y <= (float)0.9 * info.Height )
+                        if ( y >= defencewall_5_y_2[0] * info.Height && y <= defencewall_5_y_2[1] * info.Height )
                         {
                             wall_pn[4] = true;
                         }
-                        if( y >= (float)0.15 * info.Height && y <= (float)0.4 * info.Height )
+                        if( y >= defencewall_5_y_1[0] * info.Height && y <= defencewall_5_y_1[1] * info.Height )
+                        {
+                            wall_pn[4] = true;
+                        }
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private void DefenceWallTouchJudge_thread(int LEVEL, float x, float y)
+        {
+            switch (LEVEL)
+            {
+                case 1:
+                    if (wall_pn[0] != true && x >= (defencewall_1_x[0]-ballsize) * x_width_save &&
+                        x <= (defencewall_1_x[1] - ballsize) * x_width_save && y >= defencewall_1_y[0] * y_width_save
+                        && y <= defencewall_1_y[1] * y_width_save)
+                    {
+                        wall_pn[0] = true;
+                    }
+                    break;
+                case 2:
+                    if (wall_pn[1] != true && x >= (defencewall_2_x[0] - ballsize) * x_width_save &&
+                        x <= (defencewall_2_x[0] + ballsize*2) * x_width_save && y >= defencewall_2_y[0] * y_width_save
+                        && y <= defencewall_2_y[1] * y_width_save)
+                    {
+                        wall_pn[1] = true;
+                    }
+                    break;
+                case 3:
+                    if (wall_pn[2] != true && x >= (defencewall_3_x[0]-ballsize) * x_width_save &&
+                        x <= (defencewall_3_x[0] + ballsize*2) * x_width_save && y >= defencewall_3_y[0] * y_width_save
+                        && y <= (defencewall_3_y[0] / 10 + defencewall_3_y[0]) * y_width_save)
+                    {
+                        wall_pn[2] = true;
+                        xpos_mirror = (defencewall_3_x[0] - ballsize);
+                    }
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize) * x_width_save &&
+                        x <= (defencewall_3_x[0] + ballsize * 3) * x_width_save && y >= defencewall_3_y[0] * y_width_save
+                        && y <= (defencewall_3_y[0] / 10 + defencewall_3_y[0]) * y_width_save)
+                    {
+                        wall_pn[2] = true;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize);
+                    }
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize * 4) * x_width_save &&
+                        x <= (defencewall_3_x[0] + ballsize * 6) * x_width_save && y >= (defencewall_3_y[0] / 10 + defencewall_3_y[0]) * y_width_save
+                        && y <= ((defencewall_3_y[0]*2) / 10 + defencewall_3_y[0]) * y_width_save)
+
+                    {
+                        wall_pn[2] = true;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize * 4);
+                    }
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize * 7) * x_width_save &&
+                        x <= (defencewall_3_x[0] + ballsize * 10) * x_width_save && y >= ((defencewall_3_y[0]*2) / 10 + defencewall_3_y[0]) * y_width_save
+                        && y <= ((defencewall_3_y[0] * 3) / 10 + defencewall_3_y[0]) * y_width_save)
+                    {
+                        wall_pn[2] = true;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize * 7);
+                    }
+                    else if (wall_pn[2] != true && x >= (defencewall_3_x[0] + ballsize * 10) * x_width_save &&
+                        x <= (defencewall_3_x[0] + ballsize * 12) * x_width_save && y >= ((defencewall_3_y[0] * 3) / 10 + defencewall_3_y[0]) * y_width_save
+                        && y <= ((defencewall_3_y[0] * 4) / 10 + defencewall_3_y[0]) * y_width_save)
+                    {
+                        wall_pn[2] = true;
+                        xpos_mirror = (defencewall_3_x[0] + ballsize * 10);
+                    }
+                    break;
+
+                case 4:
+                    if (wall_pn[3] != true && x >= (defencewall_4_x_1[0]-ballsize) * x_width_save &&
+                        x <= (defencewall_4_x_1[0] + ballsize) * x_width_save && y >= defencewall_4_y_1[0] * y_width_save
+                        && y <= defencewall_4_y_1[1] * y_width_save)
+                    {
+                        wall_pn[3] = true;
+                    }
+                    break;
+                case 5:
+                    if (wall_pn[4] != true && x >= (defencewall_5_x_1[0]-ballsize) * x_width_save 
+                        && x <= (defencewall_5_x_1[0] + ballsize) * x_width_save) 
+                    {
+                        //y좌표가 0~0.2info.height, 0.4~0.6만 통과한다.
+                        if ( y >= defencewall_5_y_2[0] * y_width_save && y <= defencewall_5_y_2[1] * y_width_save )
+                        {
+                            wall_pn[4] = true;
+                        }
+                        if( y >= defencewall_5_y_1[0] * y_width_save && y <= defencewall_5_y_1[1] * y_width_save )
                         {
                             wall_pn[4] = true;
                         }
@@ -1549,9 +1770,9 @@ namespace ParbolicMotionGame.ViewModels
                     // DefenceWallLevel_2[3] = new SKPoint((float)0.56 * info.Width, (float)0.7 * info.Height);
 
                     DefenceWallLevel_2[0] = new SKPoint(defencewall_2_x[0] * info.Width, defencewall_2_y[0] * info.Height);
-                    //DefenceWallLevel_2[1] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[0] * info.Height);
+                    DefenceWallLevel_2[1] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[0] * info.Height);
                     DefenceWallLevel_2[2] = new SKPoint(defencewall_2_x[0] * info.Width, defencewall_2_y[1] * info.Height);
-                    //DefenceWallLevel_2[3] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[1] * info.Height);
+                    DefenceWallLevel_2[3] = new SKPoint(defencewall_2_x[1] * info.Width, defencewall_2_y[1] * info.Height);
                     SKPaint paintDefenceWallLevel_2 = new SKPaint
                     {
                         Style = SKPaintStyle.Fill,
@@ -1703,6 +1924,7 @@ namespace ParbolicMotionGame.ViewModels
                         TouchOnOff = false;
 
                         // GameState Change
+                        StartTimer_BallWallTouch(sender);
                         GameState = (int)GameStartCondition.GamePlay;
                         break;
                 }
@@ -2046,6 +2268,7 @@ namespace ParbolicMotionGame.ViewModels
                 EndWaitTime(1000); // Add for End Btn Image
                 Gameover_textdraw(sender, surface, info);
                 timer_stop();
+                timer_stop_ballwalltouch();
             }
             else
             {
@@ -2145,7 +2368,7 @@ namespace ParbolicMotionGame.ViewModels
             {
                 rect_pn[j] = true;
             }
-            parabolics.LevelPrabolic_class = Game_level;
+            parabolics.LevelParabolic_class = Game_level;
             parabolics.ScoreParabolic_class = Game_score;
             Game_score = 0;
             Game_level = 1;
@@ -2173,7 +2396,7 @@ namespace ParbolicMotionGame.ViewModels
             {
                 rect_pn[j] = true;
             }
-            parabolics.LevelPrabolic_class = Game_level;
+            parabolics.LevelParabolic_class = Game_level;
             parabolics.ScoreParabolic_class = Game_score;
             Game_score = 0;
             Game_level = 1;
@@ -2202,7 +2425,7 @@ namespace ParbolicMotionGame.ViewModels
             {
                 rect_pn[j] = true;
             }
-            parabolics.LevelPrabolic_class = Game_level;
+            parabolics.LevelParabolic_class = Game_level;
             parabolics.ScoreParabolic_class = Game_score;
             Game_score = 0;
             Game_level = 1;
@@ -2297,7 +2520,6 @@ namespace ParbolicMotionGame.ViewModels
                         {
                             defencewall_1_y[1] = 0.8f - 0.002f * (cnt_defencewallrendering_1);
                             defencewall_1_y[0] = 0.2f - 0.002f * (cnt_defencewallrendering_1);
-                            //defencewall_1_y[1] = 0.8f - 0.002f * (cnt_defencewallrendering_1);
                             if (cnt_defencewallrendering_1 >= 99)
                             {
                                 wallupdown = false;
@@ -2308,7 +2530,6 @@ namespace ParbolicMotionGame.ViewModels
                         {
                             defencewall_1_y[1] = 0.602f + 0.002f * (cnt_defencewallrendering_1);
                             defencewall_1_y[0] = 0.002f + 0.002f * (cnt_defencewallrendering_1);
-                            //defencewall_1_y[1] = 0.602f + 0.002f * (cnt_defencewallrendering_1);
                             if (cnt_defencewallrendering_1 >= 99)
                             {
                                 wallupdown = true;
@@ -2405,48 +2626,50 @@ namespace ParbolicMotionGame.ViewModels
 
                     case 5:
                         cnt_defencewallrendering_5++;
-                        if (wallupdown) // up,left
+                        if (wallupdown)
                         {
-                            //Only: Up
+                            //Main Wall : Left Motion
+                            //Sub Wall : Right Motion
                             if (cnt_defencewallrendering_5 <= 49)
                             {
-                                defencewall_5_y_1[0] = defencewall_5_y_1[0] - 0.0015f * (cnt_defencewallrendering_5);
-                                defencewall_5_y_1[1] = defencewall_5_y_1[1] - 0.0015f * (cnt_defencewallrendering_5);
-                                defencewall_5_y_2[0] = defencewall_5_y_2[0] - 0.0015f * (cnt_defencewallrendering_5);
-                                defencewall_5_y_2[1] = defencewall_5_y_2[1] - 0.0015f * (cnt_defencewallrendering_5);
+                                defencewall_5_x_1[0] = 0.75f - 0.005f * (cnt_defencewallrendering_5);
+                                defencewall_5_x_2[0] = 0.75f + 0.002f * (cnt_defencewallrendering_5);
                             }
-                            else //Only: Left
+                            else
+                            //Main Wall : Down Motion
+                            //Sub Wall : Down Motion
                             {
-                                defencewall_5_x_1[0] = defencewall_5_x_1[0] - 0.0015f * (cnt_defencewallrendering_5 - 48);
-                                defencewall_5_x_1[1] = defencewall_5_x_1[1] - 0.0015f * (cnt_defencewallrendering_5 - 48);
-                                defencewall_5_x_2[0] = defencewall_5_x_2[0] - 0.0015f * (cnt_defencewallrendering_5 - 48);
-                                defencewall_5_x_2[1] = defencewall_5_x_2[1] - 0.0015f * (cnt_defencewallrendering_5 - 48);
+                                defencewall_5_y_1[0] = 0.15f + 0.006f * (cnt_defencewallrendering_5- 49);
+                                defencewall_5_y_1[1] = 0.4f + 0.006f * (cnt_defencewallrendering_5 - 49);
+                                defencewall_5_y_2[0] = 0.6f + 0.003f * (cnt_defencewallrendering_5 - 49);
+                                defencewall_5_y_2[1] = 0.8f + 0.003f * (cnt_defencewallrendering_5 - 49);
                             }
 
-                            if (cnt_defencewallrendering_5 == 99)
+                            if (cnt_defencewallrendering_5 >= 99)
                             {
                                 wallupdown = false;
                                 cnt_defencewallrendering_5 = 0;
                             }
                         }
-                        else //down,right
+                        else
                         {
-                            //Only: Down
                             if (cnt_defencewallrendering_5 <= 49)
+                            //Main Wall : Right Motion
+                            //Sub Wall : Left Motion
                             {
-                                defencewall_5_y_1[0] = defencewall_5_y_1[0] + 0.0015f * (cnt_defencewallrendering_5);
-                                defencewall_5_y_1[1] = defencewall_5_y_1[1] + 0.0015f * (cnt_defencewallrendering_5);
-                                defencewall_5_y_2[0] = defencewall_5_y_2[0] + 0.0015f * (cnt_defencewallrendering_5);
-                                defencewall_5_y_2[1] = defencewall_5_y_2[1] + 0.0015f * (cnt_defencewallrendering_5);
+                                defencewall_5_x_1[0] = 0.5f + 0.005f * (cnt_defencewallrendering_5);
+                                defencewall_5_x_2[0] = 0.85f - 0.002f * (cnt_defencewallrendering_5);
                             }
-                            else //Only: Right
+                            else
+                            //Main Wall : Up Motion
+                            //Sub Wall : Up Motion
                             {
-                                defencewall_5_x_1[0] = defencewall_5_x_1[0] + 0.0015f * (cnt_defencewallrendering_5 - 48);
-                                defencewall_5_x_1[1] = defencewall_5_x_1[1] + 0.0015f * (cnt_defencewallrendering_5 - 48);
-                                defencewall_5_x_2[0] = defencewall_5_x_2[0] + 0.0015f * (cnt_defencewallrendering_5 - 48);
-                                defencewall_5_x_2[1] = defencewall_5_x_2[1] + 0.0015f * (cnt_defencewallrendering_5 - 48);
+                                defencewall_5_y_1[0] = 0.45f - 0.006f * (cnt_defencewallrendering_5 - 49);
+                                defencewall_5_y_1[1] = 0.7f - 0.006f * (cnt_defencewallrendering_5 - 49);
+                                defencewall_5_y_2[0] = 0.75f - 0.003f * (cnt_defencewallrendering_5 - 49);
+                                defencewall_5_y_2[1] = 0.95f - 0.003f * (cnt_defencewallrendering_5 - 49);
                             }
-                            if (cnt_defencewallrendering_5 == 99)
+                            if (cnt_defencewallrendering_5 >= 99)
                             {
                                 wallupdown = true;
                                 cnt_defencewallrendering_5 = 0;
@@ -2508,13 +2731,36 @@ namespace ParbolicMotionGame.ViewModels
                 //}
             });
         }
-        private async void EndWaitTime(int WaitTime)
+
+        public void StartTimer_BallWallTouch(object sender)
+        {
+            timer_start_BallWallTouch(MY_TIMER_TICK_OBJECT2, sender, 0 ,time_interval);
+        }
+        private void timer_start_BallWallTouch(TimerCallback callback, object sender, int start, int time_interval)
+        {
+            timer_BallWallTouch = new System.Threading.Timer(callback, sender, start, time_interval);
+        }
+
+        private async void MY_TIMER_TICK_OBJECT2(object sender)
+        {
+            await Task.Run( () =>
+            {
+                //TODO: Calculate Function Make...
+                PredictPostionCalculate_thread(Vo_test, control_rcos_abs, control_rsin_abs);
+            });
+        }
+
+        public async void EndWaitTime(int WaitTime)
         {
             await Task.Delay(WaitTime);
         }
-        private void timer_stop()
+        public void timer_stop()
         {
             timer_.Dispose();
+        }
+        private void timer_stop_ballwalltouch()
+        {
+            timer_BallWallTouch.Dispose();
         }
 
         private void timer_stop_wall()
