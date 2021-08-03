@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 public class ClickCharacter : TrainingMove
 {
     [Header("Open Character Image")]
@@ -24,11 +25,15 @@ public class ClickCharacter : TrainingMove
     private float UpgradeMin = 0f;
     private float UpgradeMax = 100f;
     private float UpgradeResult;
-    private float[] UpgradeList = { 49.5f, 60.3f };
+    private int MaxGladiatorLevel = 9;
+    //(ex) +1,+2,+3 100%, +4 51%, +5 34%, +6 26%, +7 16%...)
+    private float[] UpgradeList = { 100f, 100f, 100f, 51f, 44f, 36f, 24f, 20f, 14f, 0f };
     private static int InitGladiatorStat_Num = 4;
     private float[] InitGladiatorStat = new float[InitGladiatorStat_Num];
 
-    // [Header("Health Bar")]
+    [Header("Load Upgrade Scene")]
+    public Animator transition;
+    public float transitionTime = 0.5f;
     // public HealthBar healthBar;
     
     // Start is called before the first frame update
@@ -88,7 +93,7 @@ public class ClickCharacter : TrainingMove
         {
             CharacterPanel.SetActive(true);
             GladiatorImage.SetActive(true);
-            OpenTextGladiatorStat();
+            OpenTextGladiatorStat(Level);
             Time.timeScale = 0.5f;
         }
         else
@@ -107,47 +112,128 @@ public class ClickCharacter : TrainingMove
         isOpend = false;
     }
 
-    private void OpenTextGladiatorStat()
+    private void OpenTextGladiatorStat(int this_Level)
     {
         GladiatorStat_Name.text = gladiatorName.ToString();
         GladiatorStat_Lv.text = Level.ToString();
         GladiatorStat_Hp.text = health.ToString();
         GladiatorStat_Speed.text = moveSpeed.ToString();
         GladiatorStat_Damage.text = baseAttack.ToString();
-        GladiatorStat_PassChance.text = (100 - UpgradeList[0]).ToString();
+        if (this_Level + 1 >= MaxGladiatorLevel)
+        {
+            GladiatorStat_PassChance.text = "최대강화";
+        }
+        else
+        {
+            GladiatorStat_PassChance.text = (UpgradeList[this_Level]).ToString() + "%";
+        }
         GladiatorStat_WeaponSpeed.text = AttackSpeed.ToString();
         GladiatorStat_ProjectileSpeed.text = ProjectileSpeed_base.ToString();
     }
 
-    private void OpenTextGladiatorStatForUpgrade()
+    private void OpenTextGladiatorStatForUpgrade(int this_Level)
     {
         GladiatorStat_Lv.text = Level.ToString();
         GladiatorStat_Hp.text = health.ToString();
         GladiatorStat_Speed.text = moveSpeed.ToString();
         GladiatorStat_Damage.text = baseAttack.ToString();
-        GladiatorStat_PassChance.text = (100 - UpgradeList[0]).ToString();
+        if(this_Level + 1 >= MaxGladiatorLevel)
+        {
+            GladiatorStat_PassChance.text = "최대강화";
+        }
+        else
+        {
+            GladiatorStat_PassChance.text = (UpgradeList[this_Level]).ToString() + "%";
+        }
         GladiatorStat_WeaponSpeed.text = AttackSpeed.ToString();
         GladiatorStat_ProjectileSpeed.text = ProjectileSpeed_base.ToString();
     }
 
     public void UpgradeGladiator()
     {
-        UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
-        if(UpgradeResult > UpgradeList[0])
+        UpgradePassOrFail(Level);
+    }
+
+    private void UpgradePassOrFail(int level)
+    {
+        switch (level)
         {
-            Debug.Log("??????? :" + UpgradeResult);
+            case 0:
+                UpgradeStat();
+                OpenTextGladiatorStatForUpgrade(Level);
+                break;
+            case 1:
+                UpgradeStat();
+                OpenTextGladiatorStatForUpgrade(Level);
+                break;
+            case 2:
+                UpgradeStat();
+                OpenTextGladiatorStatForUpgrade(Level);
+                break;
+            case 3:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+
+                // Pass or Fail -> Important: Loop Scene Ok
+                ReadyUpgradeSceneLoad(); 
+                // Load Scene: (1) Ready Effect (Wait Second.. and Click Event)
+                WaitTimeForUpgradeSceneLoad(2f);
+                // Pass or Fail Scene Load
+                ProbabilitySceneLoad(UpgradeResult, Level);
+                // Scene End (Mouse Click Event)
+
+                
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            case 4:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            case 5:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            case 6:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            case 7:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            case 8:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            case 9:
+                UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
+                ProbabilityGladiator(UpgradeResult, Level);
+                break;
+            default:
+                //강화 버튼 비 활성화
+                break;
+        }
+    }
+
+    private void ProbabilityGladiator(float this_Pb, int this_Level)
+    {
+        if (this_Pb <= UpgradeList[this_Level])
+        {
+            Debug.Log("강화성공 :" + this_Pb);
             UpgradeStat();
-            OpenTextGladiatorStatForUpgrade();
+            OpenTextGladiatorStatForUpgrade(Level);
         }
         else
         {
-            Debug.Log("??????? :" + UpgradeResult);
-            DowngradeStat();
-            if (Level <= 1)
+            Debug.Log("강화실패 :" + UpgradeResult);
+            if(this_Level > 3)
             {
-                UpgradeInitialize();
+                DowngradeStat();
             }
-            OpenTextGladiatorStatForUpgrade();
+            //if (Level <= 1)
+            //{
+            //    UpgradeInitialize();
+            //}
+            OpenTextGladiatorStatForUpgrade(Level);
         }
     }
 
@@ -164,23 +250,23 @@ public class ClickCharacter : TrainingMove
 
     public void UpgradeTest()
     {
-        Debug.Log("??10??");
+        Debug.Log("렙10업");
         for(int i = 0; i < 10; i++)
         {
             WriteLevelUp();
         }
 
         WriteRuntime();
-        OpenTextGladiatorStatForUpgrade();
+        //OpenTextGladiatorStatForUpgrade();
     }
 
     public void UpgradeInitialize()
     {
-        Debug.Log("??1");
+        Debug.Log("렙1");
 
         WriteInittime();
         WriteRuntime();
-        OpenTextGladiatorStatForUpgrade();
+        //OpenTextGladiatorStatForUpgrade();
     }
 
     private void WriteLevelUp()
@@ -220,5 +306,70 @@ public class ClickCharacter : TrainingMove
         ProjectileSpeed_base = ProjectileSpeed.RuntimeValue;
         AttackSpeed = WeaponSpeed.RuntimeValue;
         Level = Level_IntValue.RuntimeValue;
+    }
+
+    private void ReadyUpgradeSceneLoad()
+    {
+        StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
+    }
+
+    IEnumerator LoadLevel(int levelIndex)
+    {
+        //play animation
+        transition.SetTrigger("StartPb");
+        //wait
+        yield return new WaitForSeconds(transitionTime);
+        //load scene
+        SceneManager.LoadScene(levelIndex);
+    }
+
+    IEnumerator WaitTimeForUpgradeSceneLoad(float this_time)
+    {
+        Debug.Log("(1) " + Time.time);
+        yield return new WaitForSecnods(this_time);
+        Debug.Log("(2) " + Time.time);
+        
+    }
+    private void ProbabilitySceneLoad(float this_Pb, int this_Level)
+    {
+        if (this_Pb <= UpgradeList[this_Level])
+        {
+            Debug.Log("강화성공 :" + this_Pb);
+            StartCoroutine(PassUpgradeSceneload());
+
+            UpgradeStat();
+            OpenTextGladiatorStatForUpgrade(Level);
+        }
+        else
+        {
+            Debug.Log("강화실패 :" + UpgradeResult);
+            StartCoroutine(FailUpgradeSceneLoad());
+
+            if(this_Level > 3)
+            {
+                DowngradeStat();
+            }
+            OpenTextGladiatorStatForUpgrade(Level);
+        }
+    }
+
+    IEnumerator PassUpgradeSceneload()
+    {
+        //play animation
+        transition.SetTrigger("PassPb");
+        //wait
+        yield return new WaitForSecnods(transitionTime);
+        //load Scene
+        SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
+    }
+
+    IEnumerator FailUpgradeSceneLoad()
+    {
+        //play animation
+        transition.SetTrigger("FailPb");
+        //wait
+        yield return new WaitForSecnods(transitionTime);
+        //load Scene
+        SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 2));
     }
 }
