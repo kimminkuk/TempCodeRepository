@@ -21,6 +21,7 @@ public class ClickCharacter : TrainingMove
     public Text GladiatorStat_ProjectileSpeed;
     public Transform GladiatorPos;
 
+    private bool TouchOnOff = false;
     private float CheckDistance_ = 0.5f;
     private float UpgradeMin = 0f;
     private float UpgradeMax = 100f;
@@ -34,6 +35,7 @@ public class ClickCharacter : TrainingMove
     [Header("Load Upgrade Scene")]
     public Animator transition;
     public float transitionTime = 0.5f;
+    
     // public HealthBar healthBar;
     
     // Start is called before the first frame update
@@ -51,6 +53,7 @@ public class ClickCharacter : TrainingMove
         AttackSpeed = WeaponSpeed.RuntimeValue;
         ProjectileSpeed_base = ProjectileSpeed.RuntimeValue;
         Level = Level_IntValue.RuntimeValue;
+
         InitGladiatorStat[0] = Level;
         InitGladiatorStat[1] = health;
         InitGladiatorStat[2] = moveSpeed;
@@ -64,6 +67,7 @@ public class ClickCharacter : TrainingMove
         base.Update();
         if (Input.GetMouseButtonDown(0))
         {
+            TouchOnOff = false;
             var pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             pos.z = transform.position.z;
 
@@ -156,6 +160,7 @@ public class ClickCharacter : TrainingMove
 
     private void UpgradePassOrFail(int level)
     {
+        TouchOnOff = true;
         switch (level)
         {
             case 0:
@@ -172,17 +177,20 @@ public class ClickCharacter : TrainingMove
                 break;
             case 3:
                 UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
-
-                // Pass or Fail -> Important: Loop Scene Ok
-                ReadyUpgradeSceneLoad(); 
-                // Load Scene: (1) Ready Effect (Wait Second.. and Click Event)
-                WaitTimeForUpgradeSceneLoad(2f);
-                // Pass or Fail Scene Load
+                //1) Load Canvas Image Black Out Effect -> Important: Loop Scene Ok
+                while(TouchOnOff) // um... fine code ?
+                {
+                    WaitTimeForUpgradeSceneLoad(2f);
+                }
+                //2) Pass or Fail Scene Load
                 ProbabilitySceneLoad(UpgradeResult, Level);
-                // Scene End (Mouse Click Event)
 
+                // Pass or Fail Scene Load
+                // ProbabilitySceneLoad(UpgradeResult, Level);
+                // Scene End (Mouse Click Event)
+                // End Scene Nothing is ok
                 
-                ProbabilityGladiator(UpgradeResult, Level);
+                //ProbabilityGladiator(UpgradeResult, Level);
                 break;
             case 4:
                 UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
@@ -316,6 +324,7 @@ public class ClickCharacter : TrainingMove
     IEnumerator LoadLevel(int levelIndex)
     {
         //play animation
+        //Black Fade-in
         transition.SetTrigger("StartPb");
         //wait
         yield return new WaitForSeconds(transitionTime);
@@ -323,11 +332,16 @@ public class ClickCharacter : TrainingMove
         SceneManager.LoadScene(levelIndex);
     }
 
-    IEnumerator WaitTimeForUpgradeSceneLoad(float this_time)
+    private void WaitTimeForUpgradeSceneLoad(float this_time)
     {
-        Debug.Log("(1) " + Time.time);
-        yield return new WaitForSecnods(this_time);
-        Debug.Log("(2) " + Time.time);
+        //play animation
+        //Black Fade-in
+        transition.SetTrigger("StartPb");
+        
+        // //wait
+        // Debug.Log("(1) " + Time.time);
+        // yield return new WaitForSecnods(this_time);
+        // Debug.Log("(2) " + Time.time);
         
     }
     private void ProbabilitySceneLoad(float this_Pb, int this_Level)
@@ -359,8 +373,9 @@ public class ClickCharacter : TrainingMove
         transition.SetTrigger("PassPb");
         //wait
         yield return new WaitForSecnods(transitionTime);
-        //load Scene
-        SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
+        
+        // //load Scene
+        // SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
     }
 
     IEnumerator FailUpgradeSceneLoad()
@@ -369,7 +384,7 @@ public class ClickCharacter : TrainingMove
         transition.SetTrigger("FailPb");
         //wait
         yield return new WaitForSecnods(transitionTime);
-        //load Scene
-        SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 2));
+        // //load Scene
+        // SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 2));
     }
 }
