@@ -3,6 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+
+public enum SceneState
+{
+    idle,
+    pass,
+    fail
+}
+
 public class ClickCharacter : TrainingMove
 {
     [Header("Open Character Image")]
@@ -21,28 +29,32 @@ public class ClickCharacter : TrainingMove
     public Text GladiatorStat_ProjectileSpeed;
     public Transform GladiatorPos;
 
-    private bool TouchOnOff = false;
     private float CheckDistance_ = 0.5f;
     private float UpgradeMin = 0f;
     private float UpgradeMax = 100f;
     private float UpgradeResult;
     private int MaxGladiatorLevel = 9;
     //(ex) +1,+2,+3 100%, +4 51%, +5 34%, +6 26%, +7 16%...)
-    private float[] UpgradeList = { 100f, 100f, 100f, 51f, 44f, 36f, 24f, 20f, 14f, 0f };
+    private float[] UpgradeList = { 100f, 100f, 100f, 100f, 44f, 36f, 24f, 20f, 14f, 0f };
     private static int InitGladiatorStat_Num = 4;
     private float[] InitGladiatorStat = new float[InitGladiatorStat_Num];
 
-    [Header("Load Upgrade Scene")]
+    [Header("Scene Animation")]
     public Animator transition;
     public float transitionTime = 0.5f;
-    
+    private bool TouchOnOff = false;
+
+    private int SceneScenario;
+
+    // [Header("Health Bar")]
     // public HealthBar healthBar;
-    
+
     // Start is called before the first frame update
     void Start()
     {
         InitailizeSetting();
         isOpend = false;
+        SceneScenario = SceneState.idle;
         Debug.Log("ClickCharacter Start()\n");
     }
     public void InitailizeSetting()
@@ -53,7 +65,6 @@ public class ClickCharacter : TrainingMove
         AttackSpeed = WeaponSpeed.RuntimeValue;
         ProjectileSpeed_base = ProjectileSpeed.RuntimeValue;
         Level = Level_IntValue.RuntimeValue;
-
         InitGladiatorStat[0] = Level;
         InitGladiatorStat[1] = health;
         InitGladiatorStat[2] = moveSpeed;
@@ -85,6 +96,11 @@ public class ClickCharacter : TrainingMove
             else
             {
                 //CloseCharacterPanel();
+            }
+
+            if(SceneScenario == SceneState.pass)
+            {
+                StartCoroutine(LoadScenePass());
             }
         }
     }
@@ -176,21 +192,17 @@ public class ClickCharacter : TrainingMove
                 OpenTextGladiatorStatForUpgrade(Level);
                 break;
             case 3:
+                CloseCharacterPanel();
                 UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
-                //1) Load Canvas Image Black Out Effect -> Important: Loop Scene Ok
-                while(TouchOnOff) // um... fine code ?
-                {
-                    WaitTimeForUpgradeSceneLoad(2f);
-                }
+
+                // //1) Load Canvas Image Black Out Effect -> Important: Loop Scene Ok
+                // //while (TouchOnOff) // um... fine code ?
+                // {
+                //     StartCoroutine(WaitTimeForUpgradeSceneLoad(1f));
+                // }
+
                 //2) Pass or Fail Scene Load
                 ProbabilitySceneLoad(UpgradeResult, Level);
-
-                // Pass or Fail Scene Load
-                // ProbabilitySceneLoad(UpgradeResult, Level);
-                // Scene End (Mouse Click Event)
-                // End Scene Nothing is ok
-                
-                //ProbabilityGladiator(UpgradeResult, Level);
                 break;
             case 4:
                 UpgradeResult = Random.Range(UpgradeMin, UpgradeMax);
@@ -274,7 +286,7 @@ public class ClickCharacter : TrainingMove
 
         WriteInittime();
         WriteRuntime();
-        //OpenTextGladiatorStatForUpgrade();
+        OpenTextGladiatorStatForUpgrade(Level);
     }
 
     private void WriteLevelUp()
@@ -316,75 +328,89 @@ public class ClickCharacter : TrainingMove
         Level = Level_IntValue.RuntimeValue;
     }
 
-    private void ReadyUpgradeSceneLoad()
+    IEnumerator WaitTimeForUpgradeSceneLoad(float this_time)
     {
-        StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
+        //play animation
+        //Black Fade-in
+        Debug.Log("Wait!\n");
+        transition.SetTrigger("Start_Wait");
+        //wait
+        yield return new WaitForSeconds(this_time);
+        // //wait
+        // Debug.Log("(1) " + Time.time);
+        // yield return new WaitForSecnods(this_time);
+        // Debug.Log("(2) " + Time.time);
+
+    }
+    private void ProbabilitySceneLoad(float this_Pb, int this_Level)
+    {
+        if (this_Pb <= UpgradeList[this_Level])
+        {
+            UpgradeStat();
+            UpgradeLevel_IntValue.RuntimeValue = Level;
+            Debug.Log("강화성공 :" + this_Pb);
+            PassUpgradeSceneload();
+            //OpenTextGladiatorStatForUpgrade(Level);
+        }
+        else
+        {
+            if (this_Level > 3)
+            {
+                DowngradeStat();
+            }
+            Debug.Log("강화실패 :" + UpgradeResult);
+            UpgradeLevel_IntValue.RuntimeValue = Level;
+            FailUpgradeSceneLoad();
+            //OpenTextGladiatorStatForUpgrade(Level);
+        }
+    }
+
+    private void PassUpgradeSceneload()
+    {
+        //load Scene
+        //StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 2));
+        SceneScenario = SceneState.pass;
+        StartCoroutine(LoadScenePassFailLoop());
+    }
+
+    private void FailUpgradeSceneLoad()
+    {
+        //load Scene
+        StartCoroutine(LoadLevel(SceneManager.GetActiveScene().buildIndex + 3));
+
+        SceneScenario = SceneState.fail;
+        //StartCoroutine(LoadScenePassFailLoop());
     }
 
     IEnumerator LoadLevel(int levelIndex)
     {
         //play animation
         //Black Fade-in
-        transition.SetTrigger("StartPb");
+        //transition.SetTrigger("Start_Wait");
         //wait
-        yield return new WaitForSeconds(transitionTime);
+        yield return new WaitForSeconds(1f);
         //load scene
         SceneManager.LoadScene(levelIndex);
     }
 
-    private void WaitTimeForUpgradeSceneLoad(float this_time)
+    IEnumerator LoadScenePassFailLoop()
     {
         //play animation
         //Black Fade-in
-        transition.SetTrigger("StartPb");
-        
-        // //wait
-        // Debug.Log("(1) " + Time.time);
-        // yield return new WaitForSecnods(this_time);
-        // Debug.Log("(2) " + Time.time);
-        
-    }
-    private void ProbabilitySceneLoad(float this_Pb, int this_Level)
-    {
-        if (this_Pb <= UpgradeList[this_Level])
-        {
-            Debug.Log("강화성공 :" + this_Pb);
-            StartCoroutine(PassUpgradeSceneload());
-
-            UpgradeStat();
-            OpenTextGladiatorStatForUpgrade(Level);
-        }
-        else
-        {
-            Debug.Log("강화실패 :" + UpgradeResult);
-            StartCoroutine(FailUpgradeSceneLoad());
-
-            if(this_Level > 3)
-            {
-                DowngradeStat();
-            }
-            OpenTextGladiatorStatForUpgrade(Level);
-        }
+        //if transition Start_PassLoop is Loop condition
+        transition.SetTrigger("Start_PassFailLoop");
+        //wait
+        yield return new WaitForSeconds(1f);
     }
 
-    IEnumerator PassUpgradeSceneload()
+    IEnumerator LoadScenePass()
     {
         //play animation
-        transition.SetTrigger("PassPb");
+        //Black Fade-in
+        //if transition Start_PassLoop is Loop condition
+        SceneScenario = SceneState.idle;
+        transition.SetTrigger("Start_Pass");
         //wait
-        yield return new WaitForSecnods(transitionTime);
-        
-        // //load Scene
-        // SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 1));
-    }
-
-    IEnumerator FailUpgradeSceneLoad()
-    {
-        //play animation
-        transition.SetTrigger("FailPb");
-        //wait
-        yield return new WaitForSecnods(transitionTime);
-        // //load Scene
-        // SceneManager.LoadScene(LoadLevel(SceneManager.GetActiveScene().buildIndex + 2));
+        yield return new WaitForSeconds(2.5f);
     }
 }
