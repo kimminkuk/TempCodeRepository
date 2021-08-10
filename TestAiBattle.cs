@@ -114,4 +114,42 @@ public class TestAiBattle : MonoBehaviour {
             }
         }
     }
+
+
+    //1) Layermask Orge and Log  -> how to select one?
+    //2) case 2 -> it's Unpretty Code... but now i can only think of this
+    LayerMask Orge_MASK = 1 << 8;
+    LayerMask Log_MASK = 1 << 9;
+    private int[] LayerList = {1 << 8, 1 << 9};
+    private void OrgeDamageLayer(Vector2 this_AttackPoint)
+    {
+        if (Team_State == A_Team)
+        {
+            Collider2D[] hitOrge = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Orge_MASK);
+            foreach (Collider2D enemy in hitOrge)
+            {
+                enemy.GetComponent<Orge>().TakeDamage(baseAttack, B_Team);
+            }
+
+            Collider2D[] hitLog = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Log_MASK);
+            foreach (Collider2D enemy in hitLog)
+            {
+                enemy.GetComponent<Log>().TakeDamage(baseAttack, B_Team);
+            }
+        }
+        else if (Team_State == B_Team)
+        {
+            Collider2D[] hitOrge = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Orge_MASK);
+            foreach (Collider2D enemy in hitOrge)
+            {
+                enemy.GetComponent<Orge>().TakeDamage(baseAttack, A_Team);
+            }
+
+            Collider2D[] hitLog = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Log_MASK);
+            foreach (Collider2D enemy in hitLog)
+            {
+                enemy.GetComponent<Log>().TakeDamage(baseAttack, A_Team);
+            }
+        }
+    }
 }
