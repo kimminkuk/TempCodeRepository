@@ -2,21 +2,27 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Townt_Projectile : Projectile
+public class ParabolicRock : Projectile
 {
     [Tooltip("Position we want to hit")]
     //public Vector3 targetPos;
     public GameObject hitEffect;
     public int team;
-    private Animator Ani;
-    [Header("Skill Casting Object")]
-    public GameObject Casting;
+    // 
+    // [Tooltip("Horizontal seppd, in units/sec")]
+    //public float speed = 1;
+    private Vector3 startPos;
+    // 
+    // [Tooltip("How high the arc should be, in units")]
+    public float arcHeight = 1;
     // Start is called before the first frame update
     void Start()
     {
-        Ani = GetComponent<Animator>();
+        Debug.Log("Parabolic_Start\n");
         myRigidbody = GetComponent<Rigidbody2D>();
-        lifetimeSeconds = lifetime*2;
+        lifetimeSeconds = lifetime;
+        startPos = transform.position;
+        //TeamSite_Projectile = team;
     }
     public override void InitSet(Vector3 this_target, int this_team, float this_projectileSpeed, int this_Damage)
     {
@@ -25,45 +31,55 @@ public class Townt_Projectile : Projectile
         speed = this_projectileSpeed;
         baseAttack = this_Damage;
     }
-
     // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
         lifetimeSeconds -= Time.deltaTime;
-
+        
         if (lifetimeSeconds <= 0)
         {
             Destroy(this.gameObject);
         }
-        // // 1) Only MoveTowards
-        // // transform.position = this.targetPos2;
-        // Vector3 nextPos = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime *1.5f);
-        // transform.position = nextPos;
 
-        // 2) MoveTowards + Lerp
-        // transform.position = this.targetPos2;
-        // Vector3 nextPos = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
-        // float baseY = Mathf.Lerp(transform.position.y, targetPos.y, 0.001f); //7*0.1 -> 0.7
-        // nextPos = new Vector3(nextPos.x, nextPos.y - baseY, transform.position.z);
-        // transform.position = nextPos;
 
-        // 3) AddForce
-        //myRigidbody.AddForce(new Vector3(0, -4f, 0), ForceMode2D.Impulse);
-        myRigidbody.AddForce(new Vector3(0, -4f, 0), ForceMode2D.Force);
+        Debug.Log("Parabolic_Update : " + targetPos);
+         // Compute the next position -- straight flight
+         Vector3 nextPos = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
+         
+         // Compute the next position, with arc added in
+         float x0 = startPos.x;
+         float x1 = targetPos.x;
+         float dist = x1 - x0;
+         float nextX = Mathf.MoveTowards(transform.position.x, x1, speed * Time.deltaTime);
+         float baseY = Mathf.Lerp(startPos.y, targetPos.y, (nextX - x0) / dist);
+         float arc = arcHeight * (nextX - x0) * (nextX - x1) / (-0.25f * dist * dist);
 
-        // 4) velocity?
-        // myRigidbody.velocity = new Vector3(0, -1, 0) * Time.deltaTime;
+        //result-> -0.25f * ( dist )
+
+        nextPos = new Vector3(nextX, baseY + arc, transform.position.z);
+
+        //nextPos = new Vector3(nextX, baseY + (-0.25f*dist), transform.position.z);
+
+        // Rotate to face the next position, and then move there
+        //transform.rotation = LookAt2D(nextPos - transform.position);
+        transform.position = nextPos;
+         
+         // // Do something when we reach the target
+         // if (nextPos == targetPos) Arrived();
     }
 
-    public void E_MakeTownt()
+    public void Parabolic_Launch(Vector3 this_target, int this_Team, float this_projectileSpeed)
     {
-        Ani.SetTrigger("TowntMake");
+        projectileSpeed_ = this_projectileSpeed * 100f;
+        baseAttack = DamageProjectile.RuntimeValue;
+        myRigidbody.velocity = this_target * projectileSpeed_ * Time.deltaTime;
+
+        TeamSite_Projectile = this_Team;
     }
 
     public override void OnTriggerEnter2D(Collider2D other)
     {
         int inflictChance = Random.Range(0, 9);
-        
         if (TeamSite_Projectile == A_Team)
         {
             if (other.gameObject.CompareTag("B_Team"))
@@ -72,13 +88,13 @@ public class Townt_Projectile : Projectile
                 Destroy(efftct, 0.2f);
                 Destroy(this.gameObject);
             }
-
+        
             Collider2D[] hitOrge = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, Orge_MASK);
             foreach (Collider2D enemy in hitOrge)
             {
                 enemy.GetComponent<Orge>().TakeDamage_Bteam(baseAttack, B_Team);
             }
-
+        
             Collider2D[] hitLog = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, Log_MASK);
             foreach (Collider2D enemy in hitLog)
             {
@@ -87,26 +103,35 @@ public class Townt_Projectile : Projectile
         }
         else if (TeamSite_Projectile == B_Team)
         {
-            Debug.Log("OnTriggerEnter2D Townt Call: " + baseAttack);
             if (other.gameObject.CompareTag("A_Team"))
             {
                 GameObject efftct = Instantiate(hitEffect, transform.position, Quaternion.identity);
                 Destroy(efftct, 0.2f);
                 Destroy(this.gameObject);
             }
-
+        
             Collider2D[] hitLog = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, Log_MASK);
             foreach (Collider2D enemy in hitLog)
             {
-                enemy.GetComponent<Log>().TakeDamage(baseAttack, A_Team);
+                enemy.GetComponent<Log>().TakeDamage(baseAttack, A_Team, inflictChance);
             }
-
+        
             Collider2D[] hitEnemy = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, Orge_MASK);
             foreach (Collider2D enemy in hitEnemy)
             {
-                Debug.Log("Townt Damage: " + baseAttack);
+                Debug.Log("Stone Damage: " + baseAttack);
                 enemy.GetComponent<NewGladiator>().TakeDamage_Ateam(baseAttack, A_Team, inflictChance);
             }
         }
+    }
+    void Arrived()
+    {
+        Destroy(gameObject);
+
+    }
+
+    static Quaternion LookAt2D(Vector2 forward)
+    {
+        return Quaternion.Euler(0, 0, Mathf.Atan2(forward.y, forward.x) * Mathf.Rad2Deg);
     }
 }
