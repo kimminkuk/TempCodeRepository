@@ -500,10 +500,10 @@ public class NewGladiator : TrainingMove
         yield return new WaitForSeconds(AttackWait * 0.33f);
 
         OrgeAnim.SetBool("Skill_2_DoubleAttack", true);
-        canOrgeAttack = false;
         yield return new WaitForSeconds(AttackWait * 0.33f);
 
         gladiatorState = GladiatorState.idle;
+        canOrgeAttack = false;
         OrgeAnim.SetBool("Skill_2_DoubleAttack", false);
         yield return new WaitForSeconds(AttackWait * 0.33f);
     }
