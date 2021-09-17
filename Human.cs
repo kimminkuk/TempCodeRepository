@@ -13,9 +13,15 @@ public class Human : Gladiator
     private Vector3 GetMoveTowards;
     private float AttackDelaySeconds;
     private float AttackWait;
-    private bool canAttack;
-    private bool inflictDamage;
+    private bool canAttack = true;
+    public bool inflictDamage;
     private int Team_State;
+    public Transform[] attackPoint;
+    public float attackRange = 0.5f;
+    public GameObject AurorProjectile_Left;
+    public GameObject AurorProjectile_Right;
+    public GameObject AurorProjectile_Up;
+    public GameObject AurorProjectile_Down;
 
     [Header("Damage Popup")]
     public GameObject FloatingTextPrefab;
@@ -35,6 +41,11 @@ public class Human : Gladiator
     [Header("Human Active SkillList")]
     public BoolValue[] ActiveSkillList;
     private bool Skill_1_OnOff = true;
+    private float Skill_1_Range;
+    private Vector3 Skill_1_CurPos;
+    private bool Skill_2_OnOff = true;
+    private float Skill_2_Range;
+    private Vector3 Skill_2_CurPos;
 
     // Start is called before the first frame update
     void Start()
@@ -77,7 +88,7 @@ public class Human : Gladiator
     {
         if (Ai_targets == null) return;
 
-        if(seeker.IsDone())
+        if (seeker.IsDone())
         {
             seeker.StartPath(HumanRigidbody.position, Ai_targets.position, OnPathComplete);
         }
@@ -85,11 +96,11 @@ public class Human : Gladiator
 
     private void OnPathComplete(Path p)
     {
-        if(!p.error)
+        if (!p.error)
         {
             path = p;
             currentWaypoint = 0;
-        }    
+        }
     }
 
     // Update is called once per frame
@@ -115,10 +126,10 @@ public class Human : Gladiator
         {
             return;
         }
-        
+
         CheckDistance(Ai_targets);
 
-        if(currentWaypoint >= path.vectorPath.Count)
+        if (currentWaypoint >= path.vectorPath.Count)
         {
             reachedEndOfPath = true;
             return;
@@ -129,7 +140,7 @@ public class Human : Gladiator
         }
 
         float distance = Vector2.Distance(HumanRigidbody.position, path.vectorPath[currentWaypoint]);
-        if(distance < nextWayPointDistance)
+        if (distance < nextWayPointDistance)
         {
             currentWaypoint++;
         }
@@ -139,32 +150,55 @@ public class Human : Gladiator
     {
         var DisPos = Vector3.Distance(targetPos.position, transform.position);
         GetMoveTowards = Vector3.MoveTowards(transform.position, Ai_targets.position, moveSpeed * Time.deltaTime);
-       
-        if ( DisPos <= chaseRadius && DisPos > attackRadius )
+        float CheckRange;
+
+        if(Skill_1_OnOff)
         {
-            if(gladiatorState == GladiatorState.idle || gladiatorState == GladiatorState.walk)
+            if(Skill_2_OnOff)
+            {
+                CheckRange = attackRadius * 4;
+            }
+            else
+            {
+                CheckRange = attackRadius * 2f;
+            }
+        }
+        else
+        {
+            CheckRange = attackRadius;
+        }
+        if (DisPos <= chaseRadius && DisPos > CheckRange)
+        {
+            if (gladiatorState == GladiatorState.idle || gladiatorState == GladiatorState.walk)
             {
                 changeAnim(GetMoveTowards - transform.position);
                 HumanRigidbody.MovePosition(GetMoveTowards);
                 ChangeState(GladiatorState.walk);
             }
         }
-        else if ( DisPos <= chaseRadius && DisPos <= attackRadius)
+        else if (DisPos <= chaseRadius && DisPos <= CheckRange)
         {
             if (gladiatorState == GladiatorState.walk || gladiatorState == GladiatorState.idle)
             {
-                if(AttackDelaySeconds <= 0)
+                changeAnim(GetMoveTowards - transform.position);
+
+                if (AttackDelaySeconds <= 0)
                 {
                     canAttack = true;
                     AttackDelaySeconds = AttackWait;
                 }
-                if(!canAttack)
+                if (!canAttack)
                 {
                     AttackDelaySeconds -= Time.deltaTime;
                 }
                 else
                 {
-                    if (Skill_1_OnOff && ActiveSkillList[0].RuntimeValue)
+                    if (Skill_2_OnOff && ActiveSkillList[1].RuntimeValue)
+                    {
+                        baseAttack = DamageIntValue.RuntimeValue * 2;
+                        StartCoroutine(Skill_2_Auror());
+                    }
+                    else if (Skill_1_OnOff && ActiveSkillList[0].RuntimeValue)
                     {
                         baseAttack = DamageIntValue.RuntimeValue * 2;
                         StartCoroutine(Skill_1_Sting());
@@ -174,11 +208,11 @@ public class Human : Gladiator
                         StartCoroutine(AttackCo());
                     }
 
-                    if(inflictDamage)
+/*                    if (inflictDamage)
                     {
                         inflictDamage = false;
                         changeAnimAttackDirection(GetMoveTowards - transform.position);
-                    }
+                    }*/
                 }
             }
         }
@@ -194,16 +228,17 @@ public class Human : Gladiator
 
     private void changeAnimAttackDirection(Vector2 direction)
     {
-        int tm = enemyLayers;
         if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
         {
             if (direction.x > 0)
             {
+                Debug.Log("Human Attack Right");
                 HumanDamageLayer(attackPoint[0].position);
             }
             else
             {
                 HumanDamageLayer(attackPoint[1].position);
+                Debug.Log("Human Attack Left");
             }
         }
         else
@@ -227,18 +262,18 @@ public class Human : Gladiator
             Collider2D[] hitOrge = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Orge_MASK);
             foreach (Collider2D enemy in hitOrge)
             {
-                enemy.GetComponent<NewGladiator>().TakeDamage_Bteam(baseAttack, B_Team);
+                enemy.GetComponent<NewGladiator>().TakeDamage_Bteam(baseAttack, B_Team, inflictChance);
             }
 
             Collider2D[] hitLog = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Log_MASK);
             foreach (Collider2D enemy in hitLog)
             {
-                enemy.GetComponent<Log>().TakeDamage(baseAttack, B_Team);
+                enemy.GetComponent<Log>().TakeDamage(baseAttack, B_Team, inflictChance);
             }
             Collider2D[] hitLog_A = Physics2D.OverlapCircleAll(this_AttackPoint, attackRange, Log_A_MASK);
             foreach (Collider2D enemy in hitLog_A)
             {
-                enemy.GetComponent<EnemyAI>().TakeDamage(baseAttack, B_Team);
+                enemy.GetComponent<EnemyAI>().TakeDamage(baseAttack, B_Team, inflictChance);
             }
         }
         else if (Team_State == B_Team)
@@ -255,15 +290,15 @@ public class Human : Gladiator
     {
         if (this_team == this.Team_State)
         {
-            if(DodgeChance <= dodge)
+            if (DodgeChance <= dodge)
             {
                 health -= damage;
                 healthBar.SetHealth(health);
                 DamagePopupOpen(damage);
-    
+
                 // Play hurt animation and KnockBack
                 StartCoroutine(TakeKnock());
-    
+
                 if (health <= 0)
                 {
                     Die();
@@ -278,29 +313,79 @@ public class Human : Gladiator
 
     private IEnumerator Skill_1_Sting()
     {
+        Skill_1_CurPos = GetMoveTowards;
         gladiatorState = GladiatorState.attack;
         HumanAnim.SetBool("Skill_1_Sting", true);
         canAttack = false;
-        inflictDamage = true;
-        yield return new WaitForSeconds(AttackWait * 0.66f);
+
+        yield return new WaitForSeconds(AttackWait * 0.5f);
+        changeAnimAttackDirection(Skill_1_CurPos - transform.position);
+
+        yield return new WaitForSeconds(AttackWait * 0.17f);
 
         Skill_1_OnOff = false;
+
         baseAttack = DamageIntValue.RuntimeValue;
         gladiatorState = GladiatorState.idle;
         HumanAnim.SetBool("Skill_1_Sting", false);
+        yield return new WaitForSeconds(AttackWait * 0.67f);
     }
+
+    private IEnumerator Skill_2_Auror()
+    {
+        Skill_2_CurPos = GetMoveTowards;
+        gladiatorState = GladiatorState.attack;
+        HumanAnim.SetBool("Skill_2_Auror", true);
+        canAttack = false;
+        
+        yield return new WaitForSeconds(AttackWait * 0.3f);
+
+        switch(DirectionSkill)
+        {
+            case 1: //Left
+                GameObject current = Instantiate(AurorProjectile_Left, transform.position, Quaternion.identity);
+                current.GetComponent<Projectile>().InitSet(Ai_targets.position, this.Team_State, 1.5f, baseAttack);
+                break;
+            case 2: //Right
+                GameObject current = Instantiate(AurorProjectile_Right, transform.position, Quaternion.identity);
+                current.GetComponent<Projectile>().InitSet(Ai_targets.position, this.Team_State, 1.5f, baseAttack);
+                break;
+            case 3: //Up
+                GameObject current = Instantiate(AurorProjectile_Up, transform.position, Quaternion.identity);
+                current.GetComponent<Projectile>().InitSet(Ai_targets.position, this.Team_State, 1.5f, baseAttack);
+                break;
+            case 4: //Down
+                GameObject current = Instantiate(AurorProjectile_Down, transform.position, Quaternion.identity);
+                current.GetComponent<Projectile>().InitSet(Ai_targets.position, this.Team_State, 1.5f, baseAttack);
+                break;
+            default:
+            break;
+        }
+        
+        yield return new WaitForSeconds(AttackWait * 0.37f);
+
+        Skill_2_OnOff = false;
+
+        baseAttack = DamageIntValue.RuntimeValue;
+        gladiatorState = GladiatorState.idle;
+        HumanAnim.SetBool("Skill_2_Auror", false);
+        yield return new WaitForSeconds(AttackWait * 0.67f);
+    }
+
     private IEnumerator AttackCo()
     {
         gladiatorState = GladiatorState.attack;
-        HumanAnim.SetBool("moving", false);
         HumanAnim.SetBool("attacking", true);
         canAttack = false;
-        inflictDamage = true;
-        yield return new WaitForSeconds(AttackWait * 0.66f);
+
+        yield return new WaitForSeconds(AttackWait * 0.5f);
+
+        changeAnimAttackDirection(GetMoveTowards - transform.position);
 
         gladiatorState = GladiatorState.idle;
         HumanAnim.SetBool("attacking", false);
-        HumanAnim.SetBool("moving", true);
+        //HumanAnim.SetBool("moving", true);
+        yield return new WaitForSeconds(AttackWait * 0.67f);
     }
 
     private IEnumerator TakeKnock()
@@ -318,13 +403,14 @@ public class Human : Gladiator
         }
     }
 
+
     public virtual void DodgePopupOpen()
     {
-        
+
         return;
     }
 
-    public override void Die()
+    public virtual void Die()
     {
         Debug.Log("Human Die!");
 
@@ -333,11 +419,10 @@ public class Human : Gladiator
         DieAnimation();
 
         //Disable the enemy
-        this.gameObject.SetActive(false);
+        //this.gameObject.SetActive(false);
+        this.gameObject.tag = "Die";
+        GetComponent<Collider2D>().enabled = false;
         this.enabled = false;
-        //Alive_BoolValue.RuntimeValue = false;
-        
-        //Destroy(this.gameObject);
     }
 
     private void DieAnimation()
@@ -352,12 +437,22 @@ public class Human : Gladiator
         go.GetComponent<TextMesh>().text = damage.ToString();
     }
 
-    public override void DeathEffect()
+    public virtual void DeathEffect()
     {
         if (deathEffect != null)
         {
             GameObject effect = Instantiate(deathEffect, transform.position, Quaternion.identity);
             Destroy(effect, deathEffectDelay);
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (attackPoint == null) return;
+
+        for (int i = 0; i < attackPoint.Length; i++)
+        {
+            Gizmos.DrawWireSphere(attackPoint[i].position, attackRange);
         }
     }
 }

@@ -27,6 +27,7 @@ public class Gladiator : MonoBehaviour
     public IntValue TeamSite_IntValue;
     public IntValue DodgeIntValue;
 
+    protected int DirectionSkill;
     protected int A_Team = 1;
     protected int B_Team = 2;
     protected int A_Team_Layer = 11;
@@ -34,7 +35,7 @@ public class Gladiator : MonoBehaviour
     protected LayerMask Orge_MASK = 1 << 8;
     protected LayerMask Log_MASK = 1 << 10;
     protected LayerMask Log_A_MASK = 1 << 11;
-    protected LayerMask Human_Mask = 1 << 12;
+    protected LayerMask Human_MASK = 1 << 12;
 
     public float moveSpeed;
     public int health;
@@ -71,10 +72,12 @@ public class Gladiator : MonoBehaviour
             if (direction.x > 0)
             {
                 SetAnimFloat(Vector2.right);
+                DirectionSkill = 2;
             }
             else
             {
                 SetAnimFloat(Vector2.left);
+                DirectionSkill = 1;
             }
         }
         else
@@ -82,10 +85,12 @@ public class Gladiator : MonoBehaviour
             if (direction.y > 0)
             {
                 SetAnimFloat(Vector2.up);
+                DirectionSkill = 3;
             }
             else
             {
                 SetAnimFloat(Vector2.down);
+                DirectionSkill = 4;
             }
         }
     }
