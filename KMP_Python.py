@@ -70,3 +70,32 @@ test2 = 'ABCDABCDABEE'
 result = sol2(test2, test)
 start = result[0] - test_len
 print('e',result, ' s',  start)
+
+
+
+# ###
+# def sol2(testArr, test_sol):
+#     answer = []
+#     s_iter = 0
+#     test_sol_len = len(test_sol)
+#     testArr_len = len(testArr)
+#     pi = sol(test_sol)
+
+#     for i in range(0,testArr_len):
+#         while s_iter > 0 and testArr[i] != test_sol[s_iter]:
+#             s_iter = pi[s_iter - 1]
+#         if testArr[i] == test_sol[s_iter]:
+#             if s_iter == test_sol_len-1:
+#                 answer.append((i+1)-(test_sol_len))
+#                 s_iter = pi[s_iter]
+#             else:
+#                 s_iter += 1
+#     return answer
+
+# test = str(input())
+# test2 = str(input())
+# result = sol2(test, test2)
+
+# print(len(result))
+# for i in result:
+#     print(i+1, end=' ')
