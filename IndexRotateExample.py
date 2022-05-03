@@ -57,4 +57,62 @@ for y in range(loop_short):
 
 print (EX_B)
 
+
+
+
+def test2(booked, unbooked):
+    answer = []
+    un, b = [], []
+    def time_convert(time):
+        return int(time[0:2]) * 60 + int(time[3:5])
+    
+    for t, n in booked:
+        b.append((time_convert(t),n,'b'))
+
+    for t, n in unbooked:
+        un.append((time_convert(t),n,'un'))
+
+    b = sorted(b, key=lambda x: x[0], reverse=False)
+    un = sorted(un, key=lambda x: x[0], reverse=False)
+
+    time_reserved = 0
+    time_b, time_un = b[0][0], un[0][0]
+    if time_b <= time_un:
+        time_reserved = time_b
+        answer.append(b[0][1])
+        b.pop(0)        
+    else:
+        time_reserved = time_un
+        answer.append(un[0][1])
+        un.pop(0)    
+
+    while b and un:
+        time_b, time_un = b[0][0], un[0][0]
+        if time_reserved + 10 >= time_b:
+            time_reserved = time_b
+            answer.append(b[0][1])
+            b.pop(0)
+        elif time_reserved > time_un:
+            time_reserved = time_un
+            answer.append(un[0][1])
+            un.pop(0)
+        else:
+            if time_b <= time_un:
+                time_reserved = time_b
+                answer.append(b[0][1])
+                b.pop(0)
+            else:
+                time_reserved = time_un
+                answer.append(un[0][1])
+                un.pop(0)            
+    if b:
+        while b:
+            answer.append(b[0][1])
+            b.pop(0)
+    elif un:
+        while un:
+            answer.append(un[0][1])
+            un.pop(0)
+    
+    return answer
     
