@@ -1,18 +1,22 @@
 class structConvert:
     def __init__(self):
+        self.startCond = ''
+        self.endCond = ''
+        self.op1Cond = ''
+        self.op2Cond = ''
         return
 
     def findStructName(self, strcutName):
         if len(strcutName) > 0 and strcutName[0] =="}":
             lastStrindex = strcutName.find(';')
             findSlashAndNewStr = ''
-            if strcutName.find('//') == -1:
-                findSlashAndNewStr = strcutName+'  //<<<'
+            if strcutName.find(self.op1Cond) == -1:
+                findSlashAndNewStr = strcutName+'  '+self.endCond
                 return [ strcutName[1:lastStrindex].strip(), findSlashAndNewStr]
             else:
-                findSlashAndNewStr = strcutName.replace('//', '//<<<')
-                tIdx = findSlashAndNewStr.find('//<<<')
-                tLen = len('//<<<')
+                findSlashAndNewStr = strcutName.replace(self.op1Cond, self.endCond)
+                tIdx = findSlashAndNewStr.find(self.endCond)
+                tLen = len(self.endCond)
                 L_findSlashAndNewStr = len(findSlashAndNewStr)
                 findSlashAndNewStr2 = ''
 
@@ -27,8 +31,8 @@ class structConvert:
             return [-1]
 
     def findMyComment_Ver1(self, TextLine):
-        if TextLine.find('//!<') != -1:
-            f_idx_temp = TextLine.replace('//!<', '//')
+        if TextLine.find(self.op2Cond) != -1:
+            f_idx_temp = TextLine.replace(self.op2Cond, self.op1Cond)
             return f_idx_temp
         else:
             return TextLine
@@ -44,7 +48,7 @@ class structConvert:
         
         f2 = open("_Update_"+textName, "w", encoding='UTF8')
         for step1_idx in step_1:
-            data = '//>>>'+step1_idx+'\n'
+            data = self.startCond+step1_idx+'\n'
             f2.write(data)
         f.close()
         f2.close()
@@ -62,17 +66,17 @@ class structConvert:
                 step_1.append(f_idx)
             else:
                 if check == 0:
-                    if f_idx.find("//!<") != -1:
+                    if f_idx.find(self.op2Cond) != -1:
                         f2.write(f_idx)
                     else:
-                        f_idx_temp = f_idx.replace('//!<', '//')
+                        f_idx_temp = f_idx.replace(self.op2Cond, self.op1Cond)
                         f2.write(f_idx_temp)
                 elif check == 1:
                     sName = self.findStructName(fileReadToStrip)
                     
                     if len(sName) == 2:
                         step_1.append(sName[1])
-                        step_1.insert(0, '//>>> '+sName[0]+'\n')
+                        step_1.insert(0, self.startCond+' '+sName[0]+'\n')
                         check = 0
                         for step_1_idx in step_1:
                             f2.write(step_1_idx)
@@ -100,8 +104,8 @@ class structConvert:
                 if check == 0:
                     f2.write(f_idx)
                 elif check == 1:
-                    if f_idx.find('//!<') != -1:
-                        f_idx = f_idx.replace('//!<', '//')
+                    if f_idx.find(self.op2Cond) != -1:
+                        f_idx = f_idx.replace(self.op2Cond, self.op1Cond)
                     f2.write(f_idx)
                     if fileReadToStrip[:2] == "};":
                         check = 0
@@ -109,6 +113,10 @@ class structConvert:
         f.close()
         f2.close()
 
+        return
+    def ParsingCondSet(self, start, end, op1, op2):
+        self.startCond, self.endCond = start, end
+        self.op1Cond, self.op2Cond = op1, op2
         return
 
 #textName="TgcfMemoryMap.txt"
@@ -120,5 +128,6 @@ textName="BusIfMemoryMap.txt"
 #textName="MfifUnitMemoryMap.txt"
 #textName="DpsUnitMemoryMap.txt"
 myConvert = structConvert()
+myConvert.ParsingCondSet('//>>>', '//<<<', '//', '//!<')
 myConvert.structNameMake_Ver2(textName)
 
