@@ -55,9 +55,9 @@ class stockMain:
         file_data_len = len(file_data)
         for idx, data in enumerate(file_data):
             if idx == file_data_len - 1:
-                data = "'" + str(data) + "'"
+                data = '"' + str(data) + '"'
             else:
-                data = "'" + str(data) + "'" + ","
+                data = '"' + str(data) + '"' + ","
             file.write(str(data))
             file.write('\n')
         file.close()
