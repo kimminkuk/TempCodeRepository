@@ -43,7 +43,7 @@ class stockMain:
         return self.result_company_list, self.result_company_name_list, self.result_company_code_list
     
     def file_save(self, file_name, file_data):
-        file = open(file_name, 'w')
+        file = open(file_name, 'w', encoding='utf-8')
         for data in file_data:
             file.write(str(data))
             file.write('\n')
@@ -51,7 +51,7 @@ class stockMain:
         return
     
     def file_save_ver2(self, file_name, file_data):
-        file = open(file_name, 'w')
+        file = open(file_name, 'w', encoding='utf-8')
         file_data_len = len(file_data)
         for idx, data in enumerate(file_data):
             if idx == file_data_len - 1:
